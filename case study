@@ -1,0 +1,137 @@
+import json
+
+class AttendanceTracker:
+    def __init__(self, filename="attendance_data.json"):
+        self.filename = filename
+        self.data = self._load_data()
+
+    def _load_data(self):
+        """Internal method to handle file loading safely."""
+        try:
+            with open(self.filename, "r") as f:
+                return json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError):
+            return {}
+
+    def _save_data(self):
+        """Internal method to ensure data persists."""
+        with open(self.filename, "w") as f:
+            json.dump(self.data, f, indent=4)
+
+    def add_subject(self):
+        """1. Add or Update a subject with validation."""
+        try:
+            name = input("Subject Name: ").strip().title()
+            total = int(input("Total Classes: "))
+            attended = int(input("Classes Attended: "))
+            
+            if attended > total:
+                print("❌ Error: Attended cannot be more than Total.")
+                return
+
+            self.data[name] = {"total": total, "attended": attended}
+            self._save_data()
+            print(f"✅ {name} added successfully.")
+        except ValueError:
+            print("❌ Invalid input! Please enter numbers for classes.")
+
+    def analyze(self):
+        """2. Detailed analysis of a specific subject."""
+        name = input("Subject to analyze: ").strip().title()
+        if name not in self.data:
+            print("❌ Subject not found.")
+            return
+
+        t, a = self.data[name]["total"], self.data[name]["attended"]
+        p = (a / t) * 100 if t > 0 else 0
+        
+        print(f"\n--- Analysis for {name} ---")
+        print(f"Current Percentage: {p:.2f}%")
+
+        # Bunking logic (Max classes you can miss to stay above 75%)
+        bunk = max(0, int((a / 0.75) - t))
+        print(f"😈 You can safely bunk: {bunk} more classes")
+
+        # Need logic (Classes needed to reach 75%)
+        if p < 75:
+            need = int((0.75 * t - a) / 0.25) + 1
+            print(f"📚 Requirement: You must attend {need} classes straight!")
+
+    def predict(self):
+        """3. Predict future percentage based on a hypothetical scenario."""
+        name = input("Subject: ").strip().title()
+        if name not in self.data:
+            print("❌ Not found.")
+            return
+
+        try:
+            f = int(input("Number of future classes: "))
+            ch = input("Will you (A)ttend or (B)unk these? ").lower()
+            
+            curr_t, curr_a = self.data[name]["total"], self.data[name]["attended"]
+            
+            new_t = curr_t + f
+            new_a = curr_a + f if ch == 'a' else curr_a
+            
+            pred_p = (new_a / new_t) * 100
+            print(f"🔮 Predicted Percentage: {pred_p:.2f}%")
+        except ValueError:
+            print("❌ Invalid input.")
+
+    def suggest(self):
+        """4. Quick status overview of all subjects."""
+        if not self.data:
+            print("📭 No data available.")
+            return
+
+        print("\n--- Quick Suggestions ---")
+        for name, stats in self.data.items():
+            p = (stats['attended'] / stats['total']) * 100 if stats['total'] > 0 else 0
+            if p < 75:
+                status = "🚨 ATTEND EVERYTHING"
+            elif p < 85:
+                status = "⚠️ Be careful"
+            else:
+                status = "😎 Safe to bunk"
+            print(f"{name:15}: {p:6.2f}% | {status}")
+
+    def view_all(self):
+        """5. Simple table-like view of current status."""
+        if not self.data:
+            print("📭 No data found.")
+            return
+
+        print(f"\n{'Subject':<15} {'Attended':<10} {'Total':<10} {'%':<10}")
+        print("-" * 45)
+        for name, s in self.data.items():
+            p = (s['attended'] / s['total']) * 100 if s['total'] > 0 else 0
+            print(f"{name:<15} {s['attended']:<10} {s['total']:<10} {p:<10.2f}%")
+
+def main():
+    tracker = AttendanceTracker()
+    
+    menu = {
+        "1": tracker.add_subject,
+        "2": tracker.analyze,
+        "3": tracker.predict,
+        "4": tracker.suggest,
+        "5": tracker.view_all,
+        "6": exit
+    }
+
+    while True:
+        print("\n--- 🎓 ATTENDANCE MANAGER ---")
+        print("1. Add/Update  2. Analyze  3. Predict  4. Suggest  5. View All  6. Exit")
+        choice = input("Select an option: ").strip()
+        
+        action = menu.get(choice)
+        if action:
+            if choice == "6":
+                print("Goodbye! 👋")
+                break
+            action()
+        else:
+            print("❌ Invalid Choice.")
+
+if __name__ == "__main__":
+    main()
